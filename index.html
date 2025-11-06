@@ -1,0 +1,115 @@
+<!-- save as index.html and deploy to GitHub Pages -->
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Currency Price Converter — India Friendly</title>
+  <style>
+    body{font-family:system-ui,Arial;margin:18px;max-width:760px}
+    input,select,button{padding:8px;margin:6px 0;width:100%}
+    .row{display:flex;gap:8px}
+    .col{flex:1}
+    .card{padding:12px;border-radius:8px;background:#f7f7f7;margin-top:12px}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:6px;border-bottom:1px solid #eee;text-align:left}
+  </style>
+</head>
+<body>
+  <h2>Currency Price Converter</h2>
+  <p>Base price dein aur kisi bhi country/currency me uska price dekhein.</p>
+
+  <label>Amount (base currency)</label>
+  <input id="amount" type="number" value="1000" />
+
+  <div class="row">
+    <div class="col">
+      <label>Base currency</label>
+      <select id="from">
+        <option value="INR">INR - India</option>
+        <option value="USD">USD - United States</option>
+        <option value="EUR">EUR - Euro</option>
+        <option value="GBP">GBP - United Kingdom</option>
+        <option value="JPY">JPY - Japan</option>
+        <!-- aur add kar sakte ho -->
+      </select>
+    </div>
+    <div class="col">
+      <label>Target currency</label>
+      <select id="to">
+        <option value="USD">USD - United States</option>
+        <option value="INR" selected>INR - India</option>
+        <option value="EUR">EUR - Euro</option>
+        <option value="AED">AED - UAE</option>
+        <option value="AUD">AUD - Australia</option>
+        <option value="JPY">JPY - Japan</option>
+        <option value="GBP">GBP - United Kingdom</option>
+      </select>
+    </div>
+  </div>
+
+  <button id="convertBtn">Convert</button>
+
+  <div id="result" class="card" style="display:none">
+    <h3>Result</h3>
+    <div id="mainOut"></div>
+    <small id="meta"></small>
+  </div>
+
+  <div id="tableWrap" class="card" style="display:none">
+    <h3>Quick compare</h3>
+    <table id="compareTable"><thead><tr><th>Currency</th><th>Amount</th></tr></thead><tbody></tbody></table>
+  </div>
+
+<script>
+async function convert() {
+  const amt = Number(document.getElementById('amount').value) || 0;
+  const from = document.getElementById('from').value;
+  const to = document.getElementById('to').value;
+  const resultDiv = document.getElementById('result');
+  const mainOut = document.getElementById('mainOut');
+  const meta = document.getElementById('meta');
+
+  resultDiv.style.display = 'block';
+  mainOut.innerText = 'Calculating...';
+
+  try {
+    const url = `https://api.exchangerate.host/convert?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&amount=${encodeURIComponent(amt)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (!data || data.success === false) {
+      mainOut.innerText = 'Rate fetch failed — try again later.';
+      meta.innerText = '';
+      return;
+    }
+
+    const converted = Number(data.result).toFixed(2);
+    mainOut.innerHTML = `<strong>${amt} ${from}</strong> = <strong>${converted} ${to}</strong>`;
+    meta.innerText = `Rate: 1 ${from} = ${Number(data.info.rate).toFixed(6)} ${to} — source: exchangerate.host`;
+
+    // Quick compare: show top currencies
+    const top = ['USD','EUR','INR','GBP','AED','AUD','JPY','CAD','SGD','SAR'];
+    const tbody = document.querySelector('#compareTable tbody');
+    tbody.innerHTML = '';
+    for (const c of top) {
+      const u = `https://api.exchangerate.host/convert?from=${from}&to=${c}&amount=${amt}`;
+      const r = await fetch(u).then(r=>r.json()).catch(e=>null);
+      const val = r && r.result ? Number(r.result).toFixed(2) : '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${c}</td><td>${val}</td>`;
+      tbody.appendChild(tr);
+    }
+    document.getElementById('tableWrap').style.display = 'block';
+
+  } catch (err) {
+    mainOut.innerText = 'Error fetching exchange rate.';
+    meta.innerText = '';
+    console.error(err);
+  }
+}
+
+document.getElementById('convertBtn').addEventListener('click', convert);
+</script>
+</body>
+</html>
